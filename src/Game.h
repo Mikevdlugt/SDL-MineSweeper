@@ -43,7 +43,6 @@ public:
     void drawBombs();
 
 private:
-
     bool firstLeftPress;
     bool gameOver;
     bool gameWon;
@@ -53,8 +52,9 @@ private:
     int displayTime = 0;
 
     std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsedTime;
 
-    MineMap gameMap = MineMap(10, 10, 30);
+    MineMap gameMap = MineMap(10, 10, 20);
     SDL_Window *window;
     bool isRunning;
     SDL_Renderer *renderer;
@@ -82,6 +82,8 @@ private:
     void openTilesRecursive(int tileX, int tileY);
 
     bool checkWin();
+
+    void renderImGuiMenu();
 };
 
 #endif

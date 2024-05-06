@@ -85,10 +85,3 @@ void MineMap::countNeighbourBombs() {
         }
     }
 }
-
-
-
-
-
-
-

@@ -6,6 +6,7 @@ Game::Game() {
     firstLeftPress = true;
     isRunning = true;
     gameOver = false;
+    gameWon = false;
 }
 
 Game::~Game() {
@@ -23,7 +24,6 @@ Game::~Game() {
     for (int i = 0; i < MAX_NUM_TEXTURE_LENGTH; ++i) {
         SDL_DestroyTexture(numberTextures[i]);
     }
-
     SDL_Quit();
 }
 
@@ -54,17 +54,17 @@ int Game::init() {
     }
     LOG("Initialised Textures Succesfully")
 
-    if(SDL_LoadWAV("res/sfx/explosion.wav", &bombSoundSpec, &bombSoundBuffer, &bombSoundLength)) {
-        ERROR("Failed to initialise bombSoundAudio")
-    }
-    LOG("Initialised bombSoundAudio Succesfully")
-
-    if(SDL_LoadWAV("res/sfx/click.wav", &clickSoundSpec, &clickSoundBuffer, &clickSoundLength)) {
-        ERROR("Failed to initialise clickSoundAudio")
-    }
-    LOG("Initialised clickSoundAudio Succesfully")
-
-    SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_OUTPUT, &bombSoundSpec);
+    // if(SDL_LoadWAV("res/sfx/explosion.wav", &bombSoundSpec, &bombSoundBuffer, &bombSoundLength)) {
+    //     ERROR("Failed to initialise bombSoundAudio")
+    // }
+    // LOG("Initialised bombSoundAudio Succesfully")
+    //
+    // if(SDL_LoadWAV("res/sfx/click.wav", &clickSoundSpec, &clickSoundBuffer, &clickSoundLength)) {
+    //     ERROR("Failed to initialise clickSoundAudio")
+    // }
+    // LOG("Initialised clickSoundAudio Succesfully")
+    //
+    // SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_OUTPUT, &bombSoundSpec);
 
     initImGui();
 
@@ -185,12 +185,12 @@ void Game::initImGui() {
 }
 
 void Game::startNewGame(int newWidth, int newHeight, int newBombAmt) {
-    if (newWidth < 5 || newWidth > 20) {
+    if (newWidth < 5 || newWidth > MAX_BOARD_WIDTH) {
         LOG("Invalid width")
         invalidInput = true;
         return;
     }
-    if (newHeight < 5 || newHeight > 20) {
+    if (newHeight < 5 || newHeight > MAX_BOARD_WIDTH) {
         LOG("Invalid height")
         invalidInput = true;
         return;
@@ -211,8 +211,6 @@ void Game::startNewGame(int newWidth, int newHeight, int newBombAmt) {
 }
 
 int Game::run() {
-    std::chrono::duration<double> elapsedTime;
-
     while (isRunning) {
         if(!gameWon && !gameOver) {
             elapsedTime = std::chrono::system_clock::now() - startTime;
@@ -264,50 +262,8 @@ int Game::run() {
                     break;
             }
         }
-        // Start the Dear ImGui frame
-        ImGui_ImplSDLRenderer3_NewFrame();
-        ImGui_ImplSDL3_NewFrame();
-        ImGui::NewFrame();
+        renderImGuiMenu();
 
-        // Create ImGui Windows
-        ImGui::SetNextWindowSize(ImVec2(MENU_WIDTH, gameMap.mapHeight * TILE_SIZE));
-        ImGui::SetNextWindowPos(ImVec2(gameMap.mapWidth * TILE_SIZE, 0));
-        ImGui::Begin("New Game", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
-        // ImGui::Checkbox("Pause (Esc)", &paused);
-        // if (!paused) {
-        //     ImGui::BeginDisabled();
-        //     ImGui::Button("Next Generation (Space)");
-        //     ImGui::EndDisabled();
-        // } else {
-        //     if (ImGui::Button("Next Generation (Space)")) {
-        //         nextGeneration();
-        //     }
-        // }
-        // ImGui::Text("Up/Down: +1/-1");
-        // ImGui::Text("Ctrl Up/Down: +5/-5\n");
-        // ImGui::ColorEdit3("Background", reinterpret_cast<float*>(&backgroundColor));
-
-        ImGui::Text(("Time passed: " + std::to_string((int)elapsedTime.count()) + " seconds").c_str());
-
-        ImGui::PushItemWidth(25);
-        static char widthBuf[3] = ""; ImGui::InputText(" Width (5-20)", widthBuf, 3, ImGuiInputTextFlags_CharsDecimal);
-        static char heightBuf[3] = ""; ImGui::InputText(" Height (5-20)", heightBuf, 3, ImGuiInputTextFlags_CharsDecimal);
-        ImGui::PopItemWidth();
-        ImGui::PushItemWidth(35);
-        static char bombsBuf[4] = ""; ImGui::InputText((" Bombs (5-" + std::to_string(std::max(std::atoi(widthBuf) * std::atoi(heightBuf), 5)) + ")").c_str(), bombsBuf, 4, ImGuiInputTextFlags_CharsDecimal);
-        ImGui::PopItemWidth();
-        if (ImGui::Button("Start")) {
-            startNewGame(std::atoi(widthBuf), std::atoi(heightBuf), std::atoi(bombsBuf));
-            LOG("PlayButton Pressed")
-        }
-        if (invalidInput) {
-            ImGui::Text("Invalid Input");
-        }
-
-        ImGui::End();
-        //ImGui::ShowDemoWindow();
-
-        ImGui::Render();
         SDL_RenderClear(renderer);
         drawBoard();
         if (gameOver || gameWon) {
@@ -453,4 +409,44 @@ bool Game::checkWin() {
         }
     }
     return true;
+}
+
+void Game::renderImGuiMenu() {
+    // Start the Dear ImGui frame
+    ImGui_ImplSDLRenderer3_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
+    // Create ImGui Windows
+    ImGui::SetNextWindowSize(ImVec2(MENU_WIDTH, gameMap.mapHeight * TILE_SIZE));
+    ImGui::SetNextWindowPos(ImVec2(gameMap.mapWidth * TILE_SIZE, 0));
+    ImGui::Begin("Game Menu", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
+    ImGui::Text("Current game stats:");
+    ImGui::Text(("Time passed: " + std::to_string((int)elapsedTime.count()) + " seconds").c_str());
+    ImGui::Text("");
+    if (gameWon) {
+        ImGui::TextColored(ImVec4(0.0f, 0.0f, 1.0f, 1.0f), "Game Won!");
+        ImGui::Text("");
+    } else if (gameOver) {
+        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Game Lost ):");
+        ImGui::Text("");
+    }
+    ImGui::Text("Create new game:");
+    ImGui::PushItemWidth(25);
+    static char widthBuf[3] = ""; ImGui::InputText((" Width (5-" + std::to_string(MAX_BOARD_WIDTH) + ")").c_str(), widthBuf, 3, ImGuiInputTextFlags_CharsDecimal);
+    static char heightBuf[3] = ""; ImGui::InputText((" Height (5-" + std::to_string(MAX_BOARD_HEIGHT) + ")").c_str(), heightBuf, 3, ImGuiInputTextFlags_CharsDecimal);
+    ImGui::PopItemWidth();
+    ImGui::PushItemWidth(35);
+    static char bombsBuf[4] = ""; ImGui::InputText((" Bombs (5-" + std::to_string(std::max(std::atoi(widthBuf) * std::atoi(heightBuf), 5)) + ")").c_str(), bombsBuf, 4, ImGuiInputTextFlags_CharsDecimal);
+    ImGui::PopItemWidth();
+    if (ImGui::Button("Start")) {
+        startNewGame(std::atoi(widthBuf), std::atoi(heightBuf), std::atoi(bombsBuf));
+    }
+    if (invalidInput) {
+        ImGui::Text("Invalid Input");
+    }
+
+    ImGui::End();
+    //ImGui::ShowDemoWindow();
+    ImGui::Render();
 }

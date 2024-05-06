@@ -7,6 +7,8 @@
 #include <ctime>
 
 #define TILE_SIZE 64
+#define MAX_BOARD_WIDTH 25
+#define MAX_BOARD_HEIGHT 15
 
 class MineMap {
 public:
