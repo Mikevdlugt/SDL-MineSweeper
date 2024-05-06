@@ -355,11 +355,12 @@ void Game::handleMouseClick(int tileX, int tileY, bool isLeftClick) {
 
 void Game::openTilesRecursive(int tileX, int tileY) {
     gameMap.tiles[tileY][tileX].isOpened = true;
+    gameMap.tiles[tileY][tileX].isFlagged = false;
 
     if (!gameMap.tiles[tileY][tileX].bombNeighbours) {
         if (tileX && tileY) {
             if (!gameMap.tiles[tileY - 1][tileX - 1].isOpened) {
-                openTilesRecursive(tileX - 1, tileY - 1);
+                (tileX - 1, tileY - 1);
             }
         }
         if (tileX && tileY != gameMap.mapHeight - 1) {
