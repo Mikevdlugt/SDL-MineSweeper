@@ -195,7 +195,7 @@ void Game::startNewGame(int newWidth, int newHeight, int newBombAmt) {
         invalidInput = true;
         return;
     }
-    if (newBombAmt < 5 || newBombAmt > newWidth * newHeight) {
+    if (newBombAmt < 5 || newBombAmt > newWidth * newHeight - 1) {
         LOG("Invalid BombAmt")
         invalidInput = true;
         return;
@@ -229,6 +229,12 @@ int Game::run() {
                     break;
                 case SDL_EVENT_KEY_DOWN:
                     switch (e.key.keysym.sym) {
+                        case SDLK_e:
+                            handleMouseClick((int)mouseX / TILE_SIZE, (int)mouseY / TILE_SIZE, true);
+                            break;
+                        case SDLK_f:
+                            handleMouseClick((int)mouseX / TILE_SIZE, (int)mouseY / TILE_SIZE, false);
+                            break;
                         #ifdef DEBUG
                         case SDLK_x:
                             gameOver = !gameOver;
@@ -241,19 +247,10 @@ int Game::run() {
                 case SDL_EVENT_MOUSE_BUTTON_DOWN:
                     switch (e.button.button) {
                         case SDL_BUTTON_LEFT:
-                            if(!gameOver && !gameWon) {
-                                handleMouseClick((int)mouseX / TILE_SIZE, (int)mouseY / TILE_SIZE, true);
-                                if(checkWin()) {
-                                    LOG("Game Won")
-                                    gameWon = true;
-                                }
-                            }
-
+                            handleMouseClick((int)mouseX / TILE_SIZE, (int)mouseY / TILE_SIZE, true);
                             break;
                         case SDL_BUTTON_RIGHT:
-                            if (!gameOver && !gameWon) {
-                                handleMouseClick((int)mouseX / TILE_SIZE, (int)mouseY / TILE_SIZE, false);
-                            }
+                            handleMouseClick((int)mouseX / TILE_SIZE, (int)mouseY / TILE_SIZE, false);
                             break;
                         default:
                             break;
@@ -313,42 +310,48 @@ void Game::drawBombs() {
 }
 
 void Game::handleMouseClick(int tileX, int tileY, bool isLeftClick) {
-    if (mouseX / TILE_SIZE > gameMap.mapWidth) {
-        return;
-    }
-    if (isLeftClick) {
-        if(firstLeftPress) {
-            firstLeftPress = false;
-            if (gameMap.tiles[tileY][tileX].hasBomb) {
-                gameMap.tiles[tileY][tileX].hasBomb = false;
+    if(!gameOver && !gameWon) {
+        if (mouseX / TILE_SIZE > gameMap.mapWidth) {
+            return;
+        }
+        if (isLeftClick) {
+            if(firstLeftPress) {
+                firstLeftPress = false;
+                if (gameMap.tiles[tileY][tileX].hasBomb) {
+                    gameMap.tiles[tileY][tileX].hasBomb = false;
 
-                while (true) {
-                    int i = rand() % gameMap.mapWidth;
-                    int j = rand() % gameMap.mapHeight;
+                    while (true) {
+                        int i = rand() % gameMap.mapWidth;
+                        int j = rand() % gameMap.mapHeight;
 
-                    if(!gameMap.tiles[j][i].hasBomb && tileX != i && tileY != j) {
-                        gameMap.tiles[j][i].hasBomb = true;
-                        break;
+                        if(!gameMap.tiles[j][i].hasBomb && tileX != i && tileY != j) {
+                            gameMap.tiles[j][i].hasBomb = true;
+                            break;
+                        }
                     }
+                    gameMap.countNeighbourBombs();
                 }
-                gameMap.countNeighbourBombs();
             }
-        }
-        if (!gameMap.tiles[tileY][tileX].isFlagged) {
-            if (!gameMap.tiles[tileY][tileX].hasBomb) {
-                if (gameMap.tiles[tileY][tileX].bombNeighbours) {
-                    gameMap.tiles[tileY][tileX].isOpened = true;
+            if (!gameMap.tiles[tileY][tileX].isFlagged) {
+                if (!gameMap.tiles[tileY][tileX].hasBomb) {
+                    if (gameMap.tiles[tileY][tileX].bombNeighbours) {
+                        gameMap.tiles[tileY][tileX].isOpened = true;
+                    } else {
+                        openTilesRecursive(tileX, tileY);
+                    }
                 } else {
-                    openTilesRecursive(tileX, tileY);
+                    gameOver = true;
+                    LOG("Game Over");
                 }
-            } else {
-                gameOver = true;
-                LOG("Game Over");
+            }
+        } else { // rightClick
+            if (!gameMap.tiles[tileY][tileX].isOpened && !firstLeftPress) {
+                gameMap.tiles[tileY][tileX].isFlagged = !gameMap.tiles[tileY][tileX].isFlagged;
             }
         }
-    } else { // rightClick
-        if (!gameMap.tiles[tileY][tileX].isOpened && !firstLeftPress) {
-            gameMap.tiles[tileY][tileX].isFlagged = !gameMap.tiles[tileY][tileX].isFlagged;
+        if(checkWin()) {
+            LOG("Game Won")
+            gameWon = true;
         }
     }
 }
@@ -360,7 +363,7 @@ void Game::openTilesRecursive(int tileX, int tileY) {
     if (!gameMap.tiles[tileY][tileX].bombNeighbours) {
         if (tileX && tileY) {
             if (!gameMap.tiles[tileY - 1][tileX - 1].isOpened) {
-                (tileX - 1, tileY - 1);
+                openTilesRecursive(tileX - 1, tileY - 1);
             }
         }
         if (tileX && tileY != gameMap.mapHeight - 1) {
@@ -438,7 +441,7 @@ void Game::renderImGuiMenu() {
     static char heightBuf[3] = ""; ImGui::InputText((" Height (5-" + std::to_string(MAX_BOARD_HEIGHT) + ")").c_str(), heightBuf, 3, ImGuiInputTextFlags_CharsDecimal);
     ImGui::PopItemWidth();
     ImGui::PushItemWidth(35);
-    static char bombsBuf[4] = ""; ImGui::InputText((" Bombs (5-" + std::to_string(std::max(std::atoi(widthBuf) * std::atoi(heightBuf), 5)) + ")").c_str(), bombsBuf, 4, ImGuiInputTextFlags_CharsDecimal);
+    static char bombsBuf[4] = ""; ImGui::InputText((" Bombs (5-" + std::to_string(std::max(std::atoi(widthBuf) * std::atoi(heightBuf) - 1, 5)) + ")").c_str(), bombsBuf, 4, ImGuiInputTextFlags_CharsDecimal);
     ImGui::PopItemWidth();
     if (ImGui::Button("Start")) {
         startNewGame(std::atoi(widthBuf), std::atoi(heightBuf), std::atoi(bombsBuf));
