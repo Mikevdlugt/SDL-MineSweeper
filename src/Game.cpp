@@ -458,11 +458,11 @@ void Game::renderImGuiMenu() {
     }
 
     if (ImGui::Button("Medium")) {
-        startNewGame(15, 12, 40);
+        startNewGame(15, 12, 35);
     }
 
     if (ImGui::Button("Hard")) {
-        startNewGame(18, 14, 80);
+        startNewGame(18, 14, 60);
     }
 
     ImGui::Text("");
