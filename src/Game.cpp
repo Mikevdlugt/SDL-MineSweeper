@@ -7,6 +7,7 @@ Game::Game() {
     isRunning = true;
     gameOver = false;
     gameWon = false;
+    showMenu = true;
 }
 
 Game::~Game() {
@@ -208,6 +209,7 @@ void Game::startNewGame(int newWidth, int newHeight, int newBombAmt) {
     firstLeftPress = true;
     gameMap = MineMap(newWidth, newHeight, newBombAmt);
     SDL_SetWindowSize(window, newWidth * TILE_SIZE + MENU_WIDTH, newHeight * TILE_SIZE);
+    SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 }
 
 int Game::run() {
@@ -229,15 +231,18 @@ int Game::run() {
                     break;
                 case SDL_EVENT_KEY_DOWN:
                     switch (e.key.keysym.sym) {
-                        case SDLK_e:
+                        case SDLK_e: // openTile
                             handleMouseClick((int)mouseX / TILE_SIZE, (int)mouseY / TILE_SIZE, true);
                             break;
-                        case SDLK_f:
+                        case SDLK_f: // flagTile
                             handleMouseClick((int)mouseX / TILE_SIZE, (int)mouseY / TILE_SIZE, false);
                             break;
+                        case SDLK_s: // open / close menu
+                            toggleMenu();
+                            break;
                         #ifdef DEBUG
-                        case SDLK_x:
-                            gameOver = !gameOver;
+                        case SDLK_x: // show solution
+                            gameOver = true;
                             break;
                         #endif
                         default:
@@ -264,7 +269,7 @@ int Game::run() {
         SDL_RenderClear(renderer);
         drawBoard();
         if (gameOver || gameWon) {
-            drawBombs();
+            drawSolution();
         }
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData());
         SDL_RenderPresent(renderer);
@@ -299,12 +304,13 @@ void Game::drawBoard() {
     }
 }
 
-void Game::drawBombs() {
+void Game::drawSolution() {
     for (int i = 0; i < gameMap.mapWidth; ++i) {
         for (int j = 0; j < gameMap.mapHeight; ++j) {
             if(gameMap.tiles[j][i].hasBomb) {
                 SDL_RenderTexture(renderer, bombTexture, nullptr, &gameMap.tiles[j][i].position);
             }
+            gameMap.tiles[j][i].isOpened = true;
         }
     }
 }
@@ -347,6 +353,11 @@ void Game::handleMouseClick(int tileX, int tileY, bool isLeftClick) {
         } else { // rightClick
             if (!gameMap.tiles[tileY][tileX].isOpened && !firstLeftPress) {
                 gameMap.tiles[tileY][tileX].isFlagged = !gameMap.tiles[tileY][tileX].isFlagged;
+                if (gameMap.tiles[tileY][tileX].isFlagged) {
+                    gameMap.minesFlagged++;
+                } else {
+                    gameMap.minesFlagged--;
+                }
             }
         }
         if(checkWin()) {
@@ -428,29 +439,70 @@ void Game::renderImGuiMenu() {
     ImGui::Text("Current game stats:");
     ImGui::Text(("Time passed: " + std::to_string((int)elapsedTime.count()) + " seconds").c_str());
     ImGui::Text("");
+
     if (gameWon) {
         ImGui::TextColored(ImVec4(0.0f, 0.0f, 1.0f, 1.0f), "Game Won!");
         ImGui::Text("");
     } else if (gameOver) {
         ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Game Lost ):");
         ImGui::Text("");
+    } else {
+        ImGui::Text(("Bombs left to flag: " + std::to_string(gameMap.mineAmt - gameMap.minesFlagged)).c_str());
+        ImGui::Text("");
     }
-    ImGui::Text("Create new game:");
+
+    ImGui::Text("New game: ");
+
+    if (ImGui::Button("Easy")) {
+        startNewGame(10, 8, 10);
+    }
+
+    if (ImGui::Button("Medium")) {
+        startNewGame(15, 12, 40);
+    }
+
+    if (ImGui::Button("Hard")) {
+        startNewGame(18, 14, 80);
+    }
+
+    ImGui::Text("");
+
+    ImGui::Text("New custom game:");
     ImGui::PushItemWidth(25);
-    static char widthBuf[3] = ""; ImGui::InputText((" Width (5-" + std::to_string(MAX_BOARD_WIDTH) + ")").c_str(), widthBuf, 3, ImGuiInputTextFlags_CharsDecimal);
-    static char heightBuf[3] = ""; ImGui::InputText((" Height (5-" + std::to_string(MAX_BOARD_HEIGHT) + ")").c_str(), heightBuf, 3, ImGuiInputTextFlags_CharsDecimal);
+    static char widthBuf[3] = "";
+    ImGui::InputText((" Width (5-" + std::to_string(MAX_BOARD_WIDTH) + ")").c_str(), widthBuf, 3, ImGuiInputTextFlags_CharsDecimal);
+    static char heightBuf[3] = "";
+    ImGui::InputText((" Height (5-" + std::to_string(MAX_BOARD_HEIGHT) + ")").c_str(), heightBuf, 3, ImGuiInputTextFlags_CharsDecimal);
     ImGui::PopItemWidth();
+
     ImGui::PushItemWidth(35);
-    static char bombsBuf[4] = ""; ImGui::InputText((" Bombs (5-" + std::to_string(std::max(std::atoi(widthBuf) * std::atoi(heightBuf) - 1, 5)) + ")").c_str(), bombsBuf, 4, ImGuiInputTextFlags_CharsDecimal);
+    static char bombsBuf[4] = "";
+    ImGui::InputText((" Bombs (5-" + std::to_string(std::max(std::atoi(widthBuf) * std::atoi(heightBuf) - 1, 5)) + ")").c_str(), bombsBuf, 4, ImGuiInputTextFlags_CharsDecimal);
     ImGui::PopItemWidth();
+
     if (ImGui::Button("Start")) {
         startNewGame(std::atoi(widthBuf), std::atoi(heightBuf), std::atoi(bombsBuf));
     }
+
     if (invalidInput) {
         ImGui::Text("Invalid Input");
     }
 
     ImGui::End();
-    //ImGui::ShowDemoWindow();
+    // ImGui::ShowDemoWindow();
     ImGui::Render();
+}
+
+void Game::toggleMenu() {
+    showMenu = !showMenu;
+    short newWidth;
+
+    if (showMenu) {
+        newWidth = gameMap.mapWidth * TILE_SIZE + MENU_WIDTH;
+    } else {
+        newWidth = gameMap.mapWidth * TILE_SIZE;
+    }
+
+    SDL_SetWindowSize(window, newWidth, gameMap.mapHeight * TILE_SIZE);
+    SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 }

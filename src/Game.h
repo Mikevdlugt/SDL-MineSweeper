@@ -40,13 +40,14 @@ public:
 
     void drawBoard();
 
-    void drawBombs();
+    void drawSolution();
 
 private:
     bool firstLeftPress;
     bool gameOver;
     bool gameWon;
     bool invalidInput;
+    bool showMenu;
     float mouseX;
     float mouseY;
     int displayTime = 0;
@@ -54,7 +55,7 @@ private:
     std::chrono::time_point<std::chrono::system_clock> startTime = std::chrono::system_clock::now();
     std::chrono::duration<double> elapsedTime;
 
-    MineMap gameMap = MineMap(10, 10, 20);
+    MineMap gameMap = MineMap(10, 8, 10);
     SDL_Window *window;
     bool isRunning;
     SDL_Renderer *renderer;
@@ -84,6 +85,8 @@ private:
     bool checkWin();
 
     void renderImGuiMenu();
+
+    void toggleMenu();
 };
 
 #endif

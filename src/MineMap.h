@@ -17,6 +17,7 @@ public:
     short mapWidth;
     short mapHeight;
     short mineAmt;
+    short minesFlagged;
 
     void countNeighbourBombs();
 
