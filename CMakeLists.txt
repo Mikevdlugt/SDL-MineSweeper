@@ -27,7 +27,7 @@ source_group("headers" FILES ${PROJECT_HEADERS})
 source_group("sources" FILES ${PROJECT_SOURCES})
 
 # Set executable and target link libraries
-add_executable(${PROJECT_NAME} ${PROJECT_SOURCES} ${PROJECT_HEADERS} ${PROJECT_CONFIGS} ${VENDOR_SOURCES})
+add_executable(${PROJECT_NAME} ${PROJECT_SOURCES} ${PROJECT_HEADERS} ${PROJECT_CONFIGS} ${VENDOR_SOURCES} resources.rc)
 target_link_libraries(${PROJECT_NAME} SDL3::SDL3 SDL3_image::SDL3_image)
 set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 

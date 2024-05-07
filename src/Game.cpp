@@ -477,7 +477,7 @@ void Game::renderImGuiMenu() {
 
     ImGui::PushItemWidth(35);
     static char bombsBuf[4] = "";
-    ImGui::InputText((" Bombs (5-" + std::to_string(std::max(std::atoi(widthBuf) * std::atoi(heightBuf) - 1, 5)) + ")").c_str(), bombsBuf, 4, ImGuiInputTextFlags_CharsDecimal);
+    ImGui::InputText((" Bombs (5-" + std::to_string(std::min(std::max(std::atoi(widthBuf) * std::atoi(heightBuf) - 1, 5), MAX_BOARD_WIDTH * MAX_BOARD_HEIGHT - 1)) + ")").c_str(), bombsBuf, 4, ImGuiInputTextFlags_CharsDecimal);
     ImGui::PopItemWidth();
 
     if (ImGui::Button("Start")) {
@@ -495,14 +495,15 @@ void Game::renderImGuiMenu() {
 
 void Game::toggleMenu() {
     showMenu = !showMenu;
-    short newWidth;
 
     if (showMenu) {
-        newWidth = gameMap.mapWidth * TILE_SIZE + MENU_WIDTH;
+        // ReSharper disable once CppDFAUnreachableCode
+        SDL_SetWindowSize(window, gameMap.mapWidth * TILE_SIZE + MENU_WIDTH, gameMap.mapHeight * TILE_SIZE);
     } else {
-        newWidth = gameMap.mapWidth * TILE_SIZE;
+        // ReSharper disable once CppDFAUnreachableCode
+        SDL_SetWindowSize(window, gameMap.mapWidth * TILE_SIZE, gameMap.mapHeight * TILE_SIZE);
     }
 
-    SDL_SetWindowSize(window, newWidth, gameMap.mapHeight * TILE_SIZE);
+    // ReSharper disable once CppDFAUnreachableCode
     SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 }
